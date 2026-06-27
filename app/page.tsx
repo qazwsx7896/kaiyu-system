@@ -153,6 +153,18 @@ export default function Home() {
     })
     await supabase.from('orders').delete().eq('id', o.id)
     setShipModalOpen(false)
+
+    // 發送 LINE 出貨通知（失敗也不影響出貨流程）
+    fetch('/api/notify-shipment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer: o.customer,
+        item: o.item,
+        qty: o.qty,
+        time: timeStr,
+      }),
+    }).catch((err) => console.error('LINE 通知發送失敗:', err))
   }
 
   async function recallShipped(s: Shipped) {
