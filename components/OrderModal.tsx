@@ -39,7 +39,7 @@ export default function OrderModal({ editingOrder, defaultCol, onClose, onSaved 
         </h3>
 
         <Field label="客戶名稱 *">
-          <input style={input} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：台積電" />
+          <input style={input} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：永盛潤滑油行" />
         </Field>
         <Field label="品項 *">
           <input style={input} value={item} onChange={(e) => setItem(e.target.value)} placeholder="例：AW-68、HD-150、VG-46" />
