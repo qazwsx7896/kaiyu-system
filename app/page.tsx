@@ -17,6 +17,7 @@ type Order = {
   note: string
   urgent: boolean
   created_at: string
+  sort_order: number | null
 }
 
 type Shipped = {
@@ -82,6 +83,7 @@ export default function Home() {
   const [calModalOpen, setCalModalOpen] = useState(false)
 
   const [dragId, setDragId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   async function loadAll() {
     const today = todayStr()
@@ -89,6 +91,7 @@ export default function Home() {
     const { data: ordersData } = await supabase
       .from('orders')
       .select('*')
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
 
     const { data: shippedData } = await supabase
@@ -136,6 +139,40 @@ export default function Home() {
 
   async function moveOrder(id: string, col: string) {
     await supabase.from('orders').update({ col }).eq('id', id)
+  }
+
+  // 同一欄內拖拉排序：dragId 拖到 targetId 的位置
+  // 急單只能在急單區塊內排序，一般單只能在一般區塊內排序
+  async function reorderWithinColumn(colOrders: Order[], dragId: string, targetId: string) {
+    if (dragId === targetId) return
+    const dragOrder = colOrders.find((o) => o.id === dragId)
+    const targetOrder = colOrders.find((o) => o.id === targetId)
+    if (!dragOrder || !targetOrder) return
+    // 急單與非急單不能混拖
+    if (dragOrder.urgent !== targetOrder.urgent) return
+
+    const group = colOrders.filter((o) => o.urgent === dragOrder.urgent)
+    const withoutDrag = group.filter((o) => o.id !== dragId)
+    const targetIndex = withoutDrag.findIndex((o) => o.id === targetId)
+    if (targetIndex === -1) return
+
+    const newGroup = [...withoutDrag]
+    newGroup.splice(targetIndex, 0, dragOrder)
+
+    // 重新計算這個群組（急單組或一般組）的 sort_order，間距 10 方便之後插入
+    const updates = newGroup.map((o, idx) => ({ id: o.id, sort_order: (idx + 1) * 10 }))
+
+    // 樂觀更新本地畫面，避免等待網路造成跳動
+    setOrders((prev) =>
+      prev.map((o) => {
+        const found = updates.find((u) => u.id === o.id)
+        return found ? { ...o, sort_order: found.sort_order } : o
+      })
+    )
+
+    for (const u of updates) {
+      await supabase.from('orders').update({ sort_order: u.sort_order }).eq('id', u.id)
+    }
   }
 
   async function toggleUrgent(o: Order) {
@@ -195,14 +232,47 @@ export default function Home() {
 
   function onDrop(col: string) {
     if (dragId) {
-      moveOrder(dragId, col)
+      const dragged = orders.find((o) => o.id === dragId)
+      if (dragged && dragged.col !== col) {
+        moveOrder(dragId, col)
+      }
       setDragId(null)
+      setDragOverId(null)
     }
   }
 
-  const todoList = orders.filter((o) => o.col === 'todo').sort((a, b) => (a.urgent === b.urgent ? 0 : a.urgent ? -1 : 1))
-  const wipList = orders.filter((o) => o.col === 'wip')
-  const doneList = orders.filter((o) => o.col === 'done')
+  function onDropOnCard(targetOrder: Order) {
+    if (!dragId) return
+    const dragged = orders.find((o) => o.id === dragId)
+    if (!dragged) return
+
+    if (dragged.col !== targetOrder.col) {
+      // 跨欄拖到某張卡片上：先換欄，再排到該卡片附近（同樣限制急單/一般單分區）
+      moveOrder(dragId, targetOrder.col)
+      setDragId(null)
+      setDragOverId(null)
+      return
+    }
+
+    const colOrders = orders.filter((o) => o.col === targetOrder.col)
+    reorderWithinColumn(colOrders, dragId, targetOrder.id)
+    setDragId(null)
+    setDragOverId(null)
+  }
+
+  function sortByUrgentThenOrder(list: Order[]) {
+    return [...list].sort((a, b) => {
+      if (a.urgent !== b.urgent) return a.urgent ? -1 : 1
+      const sa = a.sort_order ?? 0
+      const sb = b.sort_order ?? 0
+      if (sa !== sb) return sa - sb
+      return a.created_at.localeCompare(b.created_at)
+    })
+  }
+
+  const todoList = sortByUrgentThenOrder(orders.filter((o) => o.col === 'todo'))
+  const wipList = sortByUrgentThenOrder(orders.filter((o) => o.col === 'wip'))
+  const doneList = sortByUrgentThenOrder(orders.filter((o) => o.col === 'done'))
   const today = todayStr()
   const todayEvents = events.filter((e) => e.date === today)
   const weekEndDate = (() => {
@@ -269,6 +339,7 @@ export default function Home() {
         <KanbanCol
           title="待生產" dotColor="#378ADD" badgeBg="#E6F1FB" badgeColor="#0C447C"
           list={todoList} onDropCol={() => onDrop('todo')} setDragId={setDragId}
+          onDropOnCard={onDropOnCard} dragOverId={dragOverId} setDragOverId={setDragOverId}
           renderCard={(o: Order) => (
             <OrderCard key={o.id} o={o} onEdit={openEditOrder} onDelete={deleteOrder} onToggleUrgent={toggleUrgent}
               onMove={() => moveOrder(o.id, 'wip')} moveLabel="生產中 →" showUrgentBtn />
@@ -278,6 +349,7 @@ export default function Home() {
         <KanbanCol
           title="生產中" dotColor="#EF9F27" badgeBg="#FAEEDA" badgeColor="#633806"
           list={wipList} onDropCol={() => onDrop('wip')} setDragId={setDragId}
+          onDropOnCard={onDropOnCard} dragOverId={dragOverId} setDragOverId={setDragOverId}
           renderCard={(o: Order) => (
             <OrderCard key={o.id} o={o} onEdit={openEditOrder} onDelete={deleteOrder}
               onMove={() => moveOrder(o.id, 'done')} moveLabel="待出貨 →" />
@@ -286,6 +358,7 @@ export default function Home() {
         <KanbanCol
           title="待出貨" dotColor="#639922" badgeBg="#EAF3DE" badgeColor="#27500A"
           list={doneList} onDropCol={() => onDrop('done')} setDragId={setDragId}
+          onDropOnCard={onDropOnCard} dragOverId={dragOverId} setDragOverId={setDragOverId}
           renderCard={(o: Order) => (
             <OrderCard key={o.id} o={o} onEdit={openEditOrder} onDelete={deleteOrder}
               onShip={() => openShip(o)} />
@@ -331,7 +404,7 @@ export default function Home() {
   )
 }
 
-function KanbanCol({ title, dotColor, badgeBg, badgeColor, list, onDropCol, setDragId, renderCard, footer }: any) {
+function KanbanCol({ title, dotColor, badgeBg, badgeColor, list, onDropCol, setDragId, renderCard, footer, onDropOnCard, dragOverId, setDragOverId }: any) {
   return (
     <div
       style={{ background: '#f7f7f7', borderRadius: 12, border: '0.5px solid #e0e0e0', display: 'flex', flexDirection: 'column', minHeight: 440 }}
@@ -347,7 +420,27 @@ function KanbanCol({ title, dotColor, badgeBg, badgeColor, list, onDropCol, setD
       </div>
       <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 60 }}>
         {list.map((o: Order) => (
-          <div key={o.id} draggable onDragStart={() => setDragId(o.id)}>
+          <div
+            key={o.id}
+            draggable
+            onDragStart={() => setDragId(o.id)}
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setDragOverId(o.id)
+            }}
+            onDragLeave={() => setDragOverId((prev: any) => (prev === o.id ? null : prev))}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDropOnCard(o)
+            }}
+            style={{
+              outline: dragOverId === o.id ? '2px solid #378ADD' : 'none',
+              borderRadius: 10,
+              transition: 'outline 0.1s',
+            }}
+          >
             {renderCard(o)}
           </div>
         ))}
