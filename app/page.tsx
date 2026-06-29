@@ -48,6 +48,18 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function weekdayChinese(dateStr: string): string {
+  const labels = ['日', '一', '二', '三', '四', '五', '六']
+  const d = new Date(dateStr + 'T00:00:00')
+  return labels[d.getDay()]
+}
+
+function fmtDateWithWeekday(s: string): string {
+  if (!s) return ''
+  const p = s.split('-')
+  return `${p[1]}/${p[2]}（${weekdayChinese(s)}）`
+}
+
 function fmtDate(s: string) {
   if (!s) return ''
   const p = s.split('-')
@@ -193,6 +205,14 @@ export default function Home() {
   const doneList = orders.filter((o) => o.col === 'done')
   const today = todayStr()
   const todayEvents = events.filter((e) => e.date === today)
+  const weekEndDate = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 7)
+    return d.toISOString().slice(0, 10)
+  })()
+  const weekEvents = events
+    .filter((e) => e.date > today && e.date <= weekEndDate)
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   if (loading) {
     return <div style={{ padding: 40, fontSize: 18, color: '#888' }}>載入中...</div>
@@ -213,18 +233,35 @@ export default function Home() {
         </div>
       </div>
 
-      <div style={{ background: '#fff', border: '0.5px solid #e0e0e0', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: '#555', marginBottom: 8 }}>📢 今日公告</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {todayEvents.length === 0 ? (
-            <span style={{ fontSize: 14, color: '#bbb', fontStyle: 'italic' }}>今日無排定行程</span>
-          ) : (
-            todayEvents.map((e) => (
-              <span key={e.id} style={{ fontSize: 13, fontWeight: 500, padding: '6px 12px', borderRadius: 8, background: '#FAEEDA', color: '#633806', border: '0.5px solid #FAC775' }}>
-                {typeLabel[e.type] || e.type}：{e.text}
-              </span>
-            ))
-          )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        <div style={{ background: '#fff', border: '0.5px solid #e0e0e0', borderRadius: 12, padding: '12px 16px' }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#555', marginBottom: 8 }}>📢 今日公告</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {todayEvents.length === 0 ? (
+              <span style={{ fontSize: 14, color: '#bbb', fontStyle: 'italic' }}>今日無排定行程</span>
+            ) : (
+              todayEvents.map((e) => (
+                <span key={e.id} style={{ fontSize: 13, fontWeight: 500, padding: '6px 12px', borderRadius: 8, background: '#FAEEDA', color: '#633806', border: '0.5px solid #FAC775' }}>
+                  {typeLabel[e.type] || e.type}：{e.text}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div style={{ background: '#fff', border: '0.5px solid #e0e0e0', borderRadius: 12, padding: '12px 16px' }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#555', marginBottom: 8 }}>🗓 本週公告（近7日）</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {weekEvents.length === 0 ? (
+              <span style={{ fontSize: 14, color: '#bbb', fontStyle: 'italic' }}>近7日無排定行程</span>
+            ) : (
+              weekEvents.map((e) => (
+                <span key={e.id} style={{ fontSize: 13, fontWeight: 500, padding: '6px 12px', borderRadius: 8, background: '#E6F1FB', color: '#0C447C', border: '0.5px solid #B5D4F4' }}>
+                  {fmtDateWithWeekday(e.date)} {typeLabel[e.type] || e.type}：{e.text}
+                </span>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
