@@ -368,7 +368,7 @@ function OrderCard({ o, onEdit, onDelete, onToggleUrgent, onMove, onShip, moveLa
           {o.process && <span style={badge('#FAEEDA', '#633806', '#FAC775')}>派工</span>}
         </div>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 500, color: '#111', marginBottom: 4 }}>{o.item}</div>
+      <div style={{ fontSize: 22, fontWeight: 500, color: '#111', marginBottom: 4, whiteSpace: 'pre-line' }}>{o.item}</div>
       {o.qty && <div style={{ fontSize: 20, fontWeight: 500, color: '#185FA5', background: '#E6F1FB', padding: '2px 10px', borderRadius: 8, display: 'inline-block', marginBottom: 6 }}>{o.qty}</div>}
       {o.process && <div style={{ fontSize: 14, color: '#888', marginTop: 2 }}>⚙ {o.process}</div>}
       {o.date && <div style={{ fontSize: 13, color: over ? '#A32D2D' : '#aaa', marginTop: 4 }}>📅 {fmtDate(o.date)} 出貨{over ? ' ⚠' : ''}</div>}
