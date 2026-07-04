@@ -1,29 +1,40 @@
 import { NextResponse } from 'next/server'
 
-// 這是臨時工具：只要在 LINE 群組裡發一句話，這裡就會把「群組 ID」印在終端機上
-// 取得群組 ID 後，這個 webhook 可以繼續保留（之後不會用到主動發送，只是被動接收用，留著無妨）
+const LINE_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN
+const LINE_GROUP_ID = process.env.LINE_GROUP_ID
 
 export async function POST(request: Request) {
-  const body = await request.json()
+  try {
+    const { customer, item, qty, process, note, time } = await request.json()
 
-  console.log('========== LINE Webhook 收到事件 ==========')
-  console.log(JSON.stringify(body, null, 2))
-
-  if (body.events && body.events.length > 0) {
-    for (const event of body.events) {
-      if (event.source && event.source.type === 'group') {
-        console.log('🎯 找到群組 ID：', event.source.groupId)
-      }
-      if (event.source && event.source.type === 'user') {
-        console.log('👤 這是個人訊息，使用者 ID：', event.source.userId)
-      }
+    if (!LINE_TOKEN || !LINE_GROUP_ID) {
+      return NextResponse.json({ ok: false, error: 'LINE not configured' }, { status: 500 })
     }
+
+    let message = `📦 出貨通知\n客戶：${customer}\n品項：${item}${qty ? ' × ' + qty : ''}`
+    if (process) message += `\n派工：${process}`
+    if (note) message += `\n備註：${note}`
+    message += `\n時間：${time}`
+
+    const res = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${LINE_TOKEN}`,
+      },
+      body: JSON.stringify({
+        to: LINE_GROUP_ID,
+        messages: [{ type: 'text', text: message }],
+      }),
+    })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      return NextResponse.json({ ok: false, error: errText }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }
-  console.log('==========================================')
-
-  return NextResponse.json({ ok: true })
-}
-
-export async function GET() {
-  return NextResponse.json({ status: 'LINE webhook is running' })
 }

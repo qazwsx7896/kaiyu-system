@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import OrderModal from '@/components/OrderModal'
 import ShipModal from '@/components/ShipModal'
@@ -211,6 +211,8 @@ export default function Home() {
         customer: o.customer,
         item: o.item,
         qty: o.qty,
+        process: o.process,
+        note: o.note,
         time: timeStr,
       }),
     }).catch((err) => console.error('LINE 通知發送失敗:', err))
@@ -463,9 +465,10 @@ function OrderCard({ o, onEdit, onDelete, onToggleUrgent, onMove, onShip, moveLa
       </div>
       <div style={{ fontSize: 22, fontWeight: 500, color: '#111', marginBottom: 4, whiteSpace: 'pre-line' }}>{o.item}</div>
       {o.qty && <div style={{ fontSize: 20, fontWeight: 500, color: '#185FA5', background: '#E6F1FB', padding: '2px 10px', borderRadius: 8, display: 'inline-block', marginBottom: 6 }}>{o.qty}</div>}
-      {o.process && <div style={{ fontSize: 14, color: '#888', marginTop: 2 }}>⚙ {o.process}</div>}
+      {o.process && <div style={{ fontSize: 15, color: '#444', marginTop: 4, fontWeight: 500 }}>⚙ {o.process}</div>}
       {o.date && <div style={{ fontSize: 13, color: over ? '#A32D2D' : '#aaa', marginTop: 4 }}>📅 {fmtDate(o.date)} 出貨{over ? ' ⚠' : ''}</div>}
-      {o.note && <div style={{ fontSize: 12, color: '#bbb', marginTop: 6, paddingTop: 6, borderTop: '0.5px solid #f0f0f0', fontStyle: 'italic' }}>{o.note}</div>}
+      {o.note && <div style={{ fontSize: 12, color: '#666', marginTop: 6, paddingTop: 6, borderTop: '0.5px solid #f0f0f0', fontStyle: 'italic' }}>{o.note}</div>}
+      <PrintCheck orderId={o.id} />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '0.5px solid #f0f0f0', alignItems: 'center' }}>
         {onMove && (
           <button onClick={onMove} style={{ fontSize: 17, fontWeight: 500, padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', flex: 1, background: '#FAEEDA', color: '#633806' }}>{moveLabel}</button>
@@ -479,6 +482,30 @@ function OrderCard({ o, onEdit, onDelete, onToggleUrgent, onMove, onShip, moveLa
         )}
         <button onClick={() => onDelete(o.id)} style={btnCard} title="刪除">🗑️</button>
       </div>
+    </div>
+  )
+}
+
+function PrintCheck({ orderId }: { orderId: string }) {
+  const key = `printed_${orderId}`
+  const [checked, setChecked] = React.useState(() => {
+    try { return localStorage.getItem(key) === '1' } catch { return false }
+  })
+
+  function toggle() {
+    const next = !checked
+    setChecked(next)
+    try { if (next) localStorage.setItem(key, '1'); else localStorage.removeItem(key) } catch {}
+  }
+
+  return (
+    <div
+      onClick={toggle}
+      title={checked ? '已印出貨單（點擊取消）' : '尚未印出貨單（點擊確認）'}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12, color: checked ? '#27500A' : '#bbb', marginTop: 4, marginBottom: 2, userSelect: 'none' }}
+    >
+      <span style={{ fontSize: 16 }}>{checked ? '☑️' : '⬜'}</span>
+      <span>{checked ? '出貨單已印' : '出貨單未印'}</span>
     </div>
   )
 }

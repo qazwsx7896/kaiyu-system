@@ -5,14 +5,16 @@ const LINE_GROUP_ID = process.env.LINE_GROUP_ID
 
 export async function POST(request: Request) {
   try {
-    const { customer, item, qty, time } = await request.json()
+    const { customer, item, qty, process, note, time } = await request.json()
 
     if (!LINE_TOKEN || !LINE_GROUP_ID) {
-      console.error('LINE 環境變數未設定，略過發送')
       return NextResponse.json({ ok: false, error: 'LINE not configured' }, { status: 500 })
     }
 
-    const message = `📦 出貨通知\n客戶：${customer}\n品項：${item}${qty ? ' × ' + qty : ''}\n時間：${time}`
+    let message = `📦 出貨通知\n客戶：${customer}\n品項：${item}${qty ? ' × ' + qty : ''}`
+    if (process) message += `\n派工：${process}`
+    if (note) message += `\n備註：${note}`
+    message += `\n時間：${time}`
 
     const res = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
@@ -28,13 +30,11 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       const errText = await res.text()
-      console.error('LINE 發送失敗:', errText)
       return NextResponse.json({ ok: false, error: errText }, { status: 500 })
     }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('notify-shipment error:', err)
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }
 }
