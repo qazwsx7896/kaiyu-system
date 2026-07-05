@@ -48,7 +48,14 @@ const typeLabel: Record<string, string> = {
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const taipeiOffset = 8 * 60
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000
+  const taipei = new Date(utc + taipeiOffset * 60000)
+  const y = taipei.getFullYear()
+  const m = String(taipei.getMonth() + 1).padStart(2, '0')
+  const d = String(taipei.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function weekdayChinese(dateStr: string): string {
