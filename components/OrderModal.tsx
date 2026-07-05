@@ -3,13 +3,10 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type ItemRow = { item: string; qty: string }
-
 export default function OrderModal({ editingOrder, defaultCol, onClose, onSaved }: any) {
   const [customer, setCustomer] = useState(editingOrder?.customer || '')
-  const [items, setItems] = useState<ItemRow[]>(
-    editingOrder ? [{ item: editingOrder.item || '', qty: editingOrder.qty || '' }] : [{ item: '', qty: '' }]
-  )
+  const [item, setItem] = useState(editingOrder?.item || '')
+  const [qty, setQty] = useState(editingOrder?.qty || '')
   const [date, setDate] = useState(editingOrder?.date || '')
   const [process, setProcessVal] = useState(editingOrder?.process || '')
   const [note, setNote] = useState(editingOrder?.note || '')
@@ -17,42 +14,19 @@ export default function OrderModal({ editingOrder, defaultCol, onClose, onSaved 
   const [col, setCol] = useState(editingOrder?.col || defaultCol)
   const [saving, setSaving] = useState(false)
 
-  function updateItem(index: number, field: 'item' | 'qty', value: string) {
-    setItems((prev) => {
-      const next = [...prev]
-      next[index] = { ...next[index], [field]: value }
-      return next
-    })
-  }
-
-  function addItemRow() {
-    setItems((prev) => [...prev, { item: '', qty: '' }])
-  }
-
-  function removeItemRow(index: number) {
-    setItems((prev) => prev.filter((_, i) => i !== index))
-  }
-
   async function save() {
-    const validItems = items.filter((row) => row.item.trim())
-
-    if (!customer.trim() || validItems.length === 0) {
-      alert('請填寫客戶名稱，並至少填寫一個品項')
+    if (!customer.trim() || !item.trim()) {
+      alert('請填寫客戶名稱與品項')
       return
     }
-
     setSaving(true)
-
-    const shared = { customer, date, process, note, urgent, col }
+    const payload = { customer, item, qty, date, process, note, urgent, col }
 
     if (editingOrder) {
-      const o = validItems[0]
-      await supabase.from('orders').update({ ...shared, item: o.item, qty: o.qty }).eq('id', editingOrder.id)
+      await supabase.from('orders').update(payload).eq('id', editingOrder.id)
     } else {
-      const rows = validItems.map((row) => ({ ...shared, item: row.item, qty: row.qty }))
-      await supabase.from('orders').insert(rows)
+      await supabase.from('orders').insert(payload)
     }
-
     setSaving(false)
     onSaved()
   }
@@ -67,47 +41,12 @@ export default function OrderModal({ editingOrder, defaultCol, onClose, onSaved 
         <Field label="客戶名稱 *">
           <input style={input} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：台積電、台塑" />
         </Field>
-
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <label style={{ fontSize: 14, color: '#555', fontWeight: 500 }}>
-              品項 *（可換行輸入多行文字）
-            </label>
-            {!editingOrder && (
-              <button onClick={addItemRow} style={addItemBtnInline}>
-                ＋ 新增品項
-              </button>
-            )}
-          </div>
-
-          {items.map((row, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'stretch' }}>
-              <textarea
-                style={{ ...textarea, flex: 2, minHeight: 80 }}
-                value={row.item}
-                onChange={(e) => updateItem(idx, 'item', e.target.value)}
-                placeholder={'例：AW-68\nHD-150\n(按 Enter 換行)'}
-                rows={3}
-              />
-              <input
-                style={{ ...input, flex: 1, minWidth: 0, alignSelf: 'flex-start' }}
-                value={row.qty}
-                onChange={(e) => updateItem(idx, 'qty', e.target.value)}
-                placeholder="數量 1D"
-              />
-              {!editingOrder && items.length > 1 && (
-                <button
-                  onClick={() => removeItemRow(idx)}
-                  style={{ ...btnCard, padding: '9px 10px', flexShrink: 0, alignSelf: 'flex-start' }}
-                  title="移除此品項"
-                >
-                  🗑️
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
+        <Field label="品項 *">
+          <input style={input} value={item} onChange={(e) => setItem(e.target.value)} placeholder="例：AW-68、HD-150、VG-46" />
+        </Field>
+        <Field label="數量">
+          <input style={input} value={qty} onChange={(e) => setQty(e.target.value)} placeholder="例：1D、1P、200L" />
+        </Field>
         <Field label="預計出貨日">
           <input style={input} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
@@ -150,10 +89,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 14 }
-const modal: React.CSSProperties = { background: '#fff', borderRadius: 12, border: '0.5px solid #ddd', padding: 20, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', color: '#1a1a1a' }
-const input: React.CSSProperties = { width: '100%', fontSize: 15, padding: '9px 11px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }
-const textarea: React.CSSProperties = { ...input, resize: 'vertical', minHeight: 56, fontFamily: 'inherit', lineHeight: 1.5 }
+const modal: React.CSSProperties = { background: '#fff', borderRadius: 12, border: '0.5px solid #ddd', padding: 20, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto', color: '#1a1a1a' }
+const input: React.CSSProperties = { width: '100%', fontSize: 15, padding: '9px 11px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', color: '#1a1a1a' }
+const textarea: React.CSSProperties = { ...input, resize: 'vertical', minHeight: 56 }
 const btnPrimary: React.CSSProperties = { fontSize: 14, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#378ADD', color: '#fff', cursor: 'pointer', fontWeight: 500 }
 const btnCancel: React.CSSProperties = { fontSize: 14, padding: '8px 18px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', color: '#555', cursor: 'pointer' }
-const btnCard: React.CSSProperties = { fontSize: 13, padding: '7px 12px', borderRadius: 8, border: '0.5px solid #ddd', background: '#fff', color: '#555', cursor: 'pointer' }
-const addItemBtnInline: React.CSSProperties = { fontSize: 12, padding: '5px 12px', borderRadius: 7, border: '0.5px solid #378ADD', background: '#E6F1FB', color: '#185FA5', cursor: 'pointer', fontWeight: 500, flexShrink: 0 }
