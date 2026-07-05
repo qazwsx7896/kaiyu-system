@@ -10,6 +10,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+function getTaipeiTime() {
+  const now = new Date()
+  // 台灣時間 UTC+8
+  const taipeiOffset = 8 * 60
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000
+  return new Date(utc + taipeiOffset * 60000)
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
@@ -20,15 +28,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'LINE not configured' }, { status: 500 })
   }
 
-  const now = new Date()
-  const today = now.toLocaleDateString('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  }).replace(/\//g, '-')
+  const taipeiNow = getTaipeiTime()
+  const year = taipeiNow.getFullYear()
+  const month = String(taipeiNow.getMonth() + 1).padStart(2, '0')
+  const day = String(taipeiNow.getDate()).padStart(2, '0')
+  const today = `${year}-${month}-${day}` // 格式跟 page.tsx 的 todayStr() 一致
 
-  const hourTW = parseInt(now.toLocaleString('zh-TW', {
-    timeZone: 'Asia/Taipei', hour: 'numeric', hour12: false,
-  }))
+  const hourTW = taipeiNow.getHours()
   const isMorning = hourTW < 14
 
   const { data: shippedData, error } = await supabase
@@ -37,7 +43,7 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!shippedData || shippedData.length === 0) {
-    return NextResponse.json({ ok: true, message: '今日尚無出貨' })
+    return NextResponse.json({ ok: true, message: `今日（${today}）尚無出貨` })
   }
 
   const records = isMorning
@@ -54,7 +60,7 @@ export async function GET(request: Request) {
   const period = isMorning ? '早上' : '全天'
   const title = `📦 ${today} ${period}出貨匯總（共 ${records.length} 筆）`
 
-  const details = records.map((s, i) => {
+  const details = records.map((s: any, i: number) => {
     let line = `${i + 1}. ${s.customer}｜${s.item}${s.qty ? ' × ' + s.qty : ''}`
     if (s.work_order) line += `\n   派工：${s.work_order}`
     if (s.note) line += `\n   備註：${s.note}`
@@ -75,5 +81,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: errText }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, sent: records.length })
+  return NextResponse.json({ ok: true, sent: records.length, date: today })
 }

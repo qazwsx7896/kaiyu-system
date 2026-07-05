@@ -25,6 +25,8 @@ type Shipped = {
   customer: string
   item: string
   qty: string
+  work_order: string | null
+  note: string | null
   shipped_date: string
   shipped_time: string
 }
@@ -197,25 +199,14 @@ export default function Home() {
       customer: o.customer,
       item: o.item,
       qty: o.qty,
+      work_order: o.process || null,
+      note: o.note || null,
       shipped_date: todayStr(),
       shipped_time: timeStr,
     })
     await supabase.from('orders').delete().eq('id', o.id)
     setShipModalOpen(false)
 
-    // 發送 LINE 出貨通知（失敗也不影響出貨流程）
-    fetch('/api/notify-shipment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer: o.customer,
-        item: o.item,
-        qty: o.qty,
-        workOrder: o.process,
-        note: o.note,
-        time: timeStr,
-      }),
-    }).catch((err) => console.error('LINE 通知發送失敗:', err))
   }
 
   async function recallShipped(s: Shipped) {
@@ -225,8 +216,8 @@ export default function Home() {
       item: s.item,
       qty: s.qty || '',
       date: '',
-      process: '',
-      note: '從今日出貨拉回',
+      process: s.work_order || '',
+      note: s.note || '',
       urgent: false,
     })
     await supabase.from('shipped').delete().eq('id', s.id)
