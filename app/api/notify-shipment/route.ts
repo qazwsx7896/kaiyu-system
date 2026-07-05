@@ -5,16 +5,13 @@ const LINE_GROUP_ID = process.env.LINE_GROUP_ID
 
 export async function POST(request: Request) {
   try {
-    const { customer, item, qty, workOrder, note, time } = await request.json()
+    const { customer, item, qty, time } = await request.json()
 
     if (!LINE_TOKEN || !LINE_GROUP_ID) {
       return NextResponse.json({ ok: false, error: 'LINE not configured' }, { status: 500 })
     }
 
-    let message = `📦 出貨通知\n客戶：${customer}\n品項：${item}${qty ? ' × ' + qty : ''}`
-    if (workOrder) message += `\n派工：${workOrder}`
-    if (note) message += `\n備註：${note}`
-    message += `\n時間：${time}`
+    const message = `📦 出貨通知\n客戶：${customer}\n品項：${item}${qty ? ' × ' + qty : ''}\n時間：${time}`
 
     const res = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
