@@ -42,7 +42,10 @@ export default function OrderModal({ editingOrder, defaultCol, onClose, onSaved 
           <input style={input} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：台積電、台塑" />
         </Field>
         <Field label="品項 *">
-          <input style={input} value={item} onChange={(e) => setItem(e.target.value)} placeholder="例：AW-68、HD-150、VG-46" />
+          <textarea style={{...textarea, minHeight: 80}} value={item} onChange={(e) => setItem(e.target.value)} placeholder={"例：AW-68
+HD-150
+VG-46
+（按 Enter 換行）"} rows={3} onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation() }} />
         </Field>
         <Field label="數量">
           <input style={input} value={qty} onChange={(e) => setQty(e.target.value)} placeholder="例：1D、1P、200L" />
