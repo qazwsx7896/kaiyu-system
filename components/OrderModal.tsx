@@ -51,10 +51,12 @@ export default function OrderModal({ editingOrder, defaultCol, onClose, onSaved 
           <input style={input} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
         <Field label="加工需求（派工單）">
-          <textarea style={textarea} value={process} onChange={(e) => setProcessVal(e.target.value)} placeholder="例：消泡劑、分裝20L×5桶、添加防鏽劑" />
+          <textarea style={textarea} value={process} onChange={(e) => setProcessVal(e.target.value)} placeholder="例：消泡劑、分裝20L×5桶、添加防鏽劑"
+          onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation() }} />
         </Field>
         <Field label="備註">
-          <textarea style={textarea} value={note} onChange={(e) => setNote(e.target.value)} placeholder="其他備注" />
+          <textarea style={textarea} value={note} onChange={(e) => setNote(e.target.value)} placeholder="其他備注"
+          onKeyDown={(e) => { if (e.key === 'Enter') e.stopPropagation() }} />
         </Field>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, marginBottom: 12 }}>
