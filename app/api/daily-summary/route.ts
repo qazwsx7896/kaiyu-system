@@ -22,53 +22,32 @@ function getTaipeiTime() {
 async function sendLine(token: string, groupId: string, message: string) {
   const res = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ to: groupId, messages: [{ type: 'text', text: message }] }),
-  })
-  if (!res.ok) {
-    const err = await res.text(    const err = await res.text(    const err =   retur    const err = await res.text(    const err = ion GET(re    const err = await res.text(    const err =.h    const err = await res.text(    const err = await reader !== `Bearer ${CRON_SECRET}`) {
-    return NextRespons    return NextRespons    return NextRespo: 401 })
-  }
-
-  if (!LINE_TOKEN || !LINE_GROUP_ID) {
-    return NextResponse.json({ error: 'LINE not configured' }, { status: 500 })
+    headers: { 'Content-Type': 'application/json', Authorization: "Bearer " + token },
+    body: JSON.stringif    body: JSON.stringif    body: JSON.stringif    body: JSON.stringif    f (!res.ok) {
+    const err = await res.text(    const err = await res.text(    const err = awaitur    const err = await res.text(    const err = awaiGET(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  if (CRON_SECRET && authHeader !  if (CRON_SECRET && authHeader !  if (CRON_SECRpons  if (CRON_SECRET && authHeader !  istatus: 4  if (CRON_SECRET && a_TOKEN ||  if (CRON_SECRET && authHeader !  if (ns  if (CRON_SECRET && authHeader !  if (CRONstatus: 500 })
   }
 
   const taipeiNow = getTaipeiTime()
-  const year = taipeiNow.getFul  const year = taipeiNow.getFul  const year = taipeiNo1).padSt  const year = taipeiNow.getFul  const yeargetDate()).padStart(2, '0')
-  const today = `${year}-${month}-${day}`
-  const hou  const hou  const hou  const hou  isMorning = hourTW < 14
+  const year = taipeiNow.getFullYear()
+  const month = String(taipeiNow.getMonth() + 1).padStart(2, '0')
+  const day = String(taipeiNow.getDat  const day = String(taipeiNow.getDat  const day = String(taipeiNow.getDons  const day = String(taipeiNow.getDat  const day = String(taipei
+  cons  cons  cons  cedData, error } = await supabase
+    .from('shipped').select('*').eq('shipped_date', today)
+    .order('created_at', { ascending: true })
 
-  const { d  const { d  con, er  const { d  const { d  con, er  const { d  const { d  con, er  const { d  const { d  .order('created_at', { ascending: true })
+  if (error) return NextResponse.json({ error: error.message },  if (error) return NextResponse.json({ error: error.message },  if (error) return NextResponse.json({ error: error.message },  if (error) return NextResponseor  if (error) return NextResponse.json({ errorny) => {
+                                                                                                                                                                                                                                                                       isMorn                            const ti                                   d +                                                               ider                                                                                                                                                                            ｜' + s.item + (s.qty ? ' × ' + s.qty : '')
+    if (s.work_order) line += '\n   派工：' + s.work_order
+    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    illDetails
+  const simpleMessage = title + '\n' + divider + '\n' + simpleDetails
 
-  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (epl  if (error) return NextResponse.json({ error: error.message },edData
+  await sendLine(LINE_TOKEN, LINE_GROUP_ID, fullMessage)
 
-  if (records.length === 0) {
-    return NextResponse.json({ ok: true, message: '此時段尚無出貨' })
+  if (LINE_TOKEN_2 && LINE_GROUP_ID_2) {
+    await sendLine(LINE_TOKEN_2, LINE_GROUP_ID_2, simpleMessage)
   }
 
-  const period = isMorning ? '早上' : '全天'
-  const title = `📦 ${today} ${period}出貨匯總（共 ${records.length} 筆）`
-
-  // 完整版（含派工單、備註）→ 舊群組
-  const fullDetails = records.map((s: any, i: number) => {
-    let line    let line    let line    let line    let line    let line    let'}`
-    let line    let line    let line    let line    let line    let line    let'}`
-`
-rn NextResponse.json({ error: error.message }, { st  if (error) return N line
-  }).join('\n')
-
-  // 簡版（只有客戶名稱和品項）→ 新群組
-  const simpleDetails = records.map((s: any, i: number) =>
-    `${i + 1}. ${s.customer}｜${s.item}${s.qty ? ' × ' + s.qty : ''}`
-  ).join('\n')
-
-  const fullMessage = `${title}\n${'─'.repeat(20)}\n${fullDetails}`
-  const simpleMessage = `${title}\n${'─'.repeat(20)}\n${simpleDetails}`
-
-  // 發送舊群組（完整版）
-  await sendLi  await sendLi  await seP_ID, fullMessage)
-
-  // 發送新群組（簡版）
-  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_TUP  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_ength, date: today })
+  return NextResponse.json({ ok: true, sent: records.length, date: today })
 }
