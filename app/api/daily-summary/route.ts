@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 
 const LINE_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN
 const LINE_GROUP_ID = process.env.LINE_GROUP_ID
+const LINE_TOKEN_2 = process.env.LINE_CHANNEL_ACCESS_TOKEN_2
+const LINE_GROUP_ID_2 = process.env.LINE_GROUP_ID_2
 const CRON_SECRET = process.env.CRON_SECRET
 
 const supabase = createClient(
@@ -12,16 +14,20 @@ const supabase = createClient(
 
 function getTaipeiTime() {
   const now = new Date()
-  // 台灣時間 UTC+8
   const taipeiOffset = 8 * 60
   const utc = now.getTime() + now.getTimezoneOffset() * 60000
   return new Date(utc + taipeiOffset * 60000)
 }
 
-export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+async function sendLine(token: string, groupId: string, message: string) {
+  const res = await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ to: groupId, messages: [{ type: 'text', text: message }] }),
+  })
+  if (!res.ok) {
+    const err = await res.text(    const err = await res.text(    const err =   retur    const err = await res.text(    const err = ion GET(re    const err = await res.text(    const err =.h    const err = await res.text(    const err = await reader !== `Bearer ${CRON_SECRET}`) {
+    return NextRespons    return NextRespons    return NextRespo: 401 })
   }
 
   if (!LINE_TOKEN || !LINE_GROUP_ID) {
@@ -29,29 +35,13 @@ export async function GET(request: Request) {
   }
 
   const taipeiNow = getTaipeiTime()
-  const year = taipeiNow.getFullYear()
-  const month = String(taipeiNow.getMonth() + 1).padStart(2, '0')
-  const day = String(taipeiNow.getDate()).padStart(2, '0')
-  const today = `${year}-${month}-${day}` // 格式跟 page.tsx 的 todayStr() 一致
+  const year = taipeiNow.getFul  const year = taipeiNow.getFul  const year = taipeiNo1).padSt  const year = taipeiNow.getFul  const yeargetDate()).padStart(2, '0')
+  const today = `${year}-${month}-${day}`
+  const hou  const hou  const hou  const hou  isMorning = hourTW < 14
 
-  const hourTW = taipeiNow.getHours()
-  const isMorning = hourTW < 14
+  const { d  const { d  con, er  const { d  const { d  con, er  const { d  const { d  con, er  const { d  const { d  .order('created_at', { ascending: true })
 
-  const { data: shippedData, error } = await supabase
-    .from('shipped').select('*').eq('shipped_date', today)
-    .order('created_at', { ascending: true })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!shippedData || shippedData.length === 0) {
-    return NextResponse.json({ ok: true, message: `今日（${today}）尚無出貨` })
-  }
-
-  const records = isMorning
-    ? shippedData.filter((s) => {
-        const h = parseInt(s.shipped_time?.split(' ')?.[1]?.split(':')?.[0] || '0')
-        return h < 12
-      })
-    : shippedData
+  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (error) return NextResponse.json({ error: error.message }, { st  if (epl  if (error) return NextResponse.json({ error: error.message },edData
 
   if (records.length === 0) {
     return NextResponse.json({ ok: true, message: '此時段尚無出貨' })
@@ -60,26 +50,25 @@ export async function GET(request: Request) {
   const period = isMorning ? '早上' : '全天'
   const title = `📦 ${today} ${period}出貨匯總（共 ${records.length} 筆）`
 
-  const details = records.map((s: any, i: number) => {
-    let line = `${i + 1}. ${s.customer}｜${s.item}${s.qty ? ' × ' + s.qty : ''}`
-    if (s.work_order) line += `\n   派工：${s.work_order}`
-    if (s.note) line += `\n   備註：${s.note}`
-    line += `｜${s.shipped_time}`
-    return line
+  // 完整版（含派工單、備註）→ 舊群組
+  const fullDetails = records.map((s: any, i: number) => {
+    let line    let line    let line    let line    let line    let line    let'}`
+    let line    let line    let line    let line    let line    let line    let'}`
+`
+rn NextResponse.json({ error: error.message }, { st  if (error) return N line
   }).join('\n')
 
-  const message = `${title}\n${'─'.repeat(20)}\n${details}`
+  // 簡版（只有客戶名稱和品項）→ 新群組
+  const simpleDetails = records.map((s: any, i: number) =>
+    `${i + 1}. ${s.customer}｜${s.item}${s.qty ? ' × ' + s.qty : ''}`
+  ).join('\n')
 
-  const res = await fetch('https://api.line.me/v2/bot/message/push', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LINE_TOKEN}` },
-    body: JSON.stringify({ to: LINE_GROUP_ID, messages: [{ type: 'text', text: message }] }),
-  })
+  const fullMessage = `${title}\n${'─'.repeat(20)}\n${fullDetails}`
+  const simpleMessage = `${title}\n${'─'.repeat(20)}\n${simpleDetails}`
 
-  if (!res.ok) {
-    const errText = await res.text()
-    return NextResponse.json({ ok: false, error: errText }, { status: 500 })
-  }
+  // 發送舊群組（完整版）
+  await sendLi  await sendLi  await seP_ID, fullMessage)
 
-  return NextResponse.json({ ok: true, sent: records.length, date: today })
+  // 發送新群組（簡版）
+  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_TUP  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_TOKEN_2 && LINE_GROUP_ID  if (LINE_ength, date: today })
 }
