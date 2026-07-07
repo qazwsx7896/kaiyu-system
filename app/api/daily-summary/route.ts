@@ -22,25 +22,73 @@ function getTaipeiTime() {
 async function sendLine(token: string, groupId: string, message: string) {
   const res = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: "Bearer " + token },
-    body: JSON.stringif    body: JSON.stringif    body: JSON.stringif    body: JSON.stringif    f (!res.ok) {
-    const err = await res.text(    const err = await res.text(    const err = awaitur    const err = await res.text(    const err = awaiGET(request: Request) {
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ to: groupId, messages: [{ type: 'text', text: message }] }),
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    console.error('LINE send error:', err)
+    return false
+  }
+  return true
+}
+
+export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (CRON_SECRET && authHeader !  if (CRON_SECRET && authHeader !  if (CRON_SECRpons  if (CRON_SECRET && authHeader !  istatus: 4  if (CRON_SECRET && a_TOKEN ||  if (CRON_SECRET && authHeader !  if (ns  if (CRON_SECRET && authHeader !  if (CRONstatus: 500 })
+  if (CRON_SECRET && authHeader !== 'Bearer ' + CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!LINE_TOKEN || !LINE_GROUP_ID) {
+    return NextResponse.json({ error: 'LINE not configured' }, { status: 500 })
   }
 
   const taipeiNow = getTaipeiTime()
   const year = taipeiNow.getFullYear()
   const month = String(taipeiNow.getMonth() + 1).padStart(2, '0')
-  const day = String(taipeiNow.getDat  const day = String(taipeiNow.getDat  const day = String(taipeiNow.getDons  const day = String(taipeiNow.getDat  const day = String(taipei
-  cons  cons  cons  cedData, error } = await supabase
+  const day = String(taipeiNow.getDate()).padStart(2, '0')
+  const today = year + '-' + month + '-' + day
+  const hourTW = taipeiNow.getHours()
+  const isMorning = hourTW < 14
+
+  const { data: shippedData, error } = await supabase
     .from('shipped').select('*').eq('shipped_date', today)
     .order('created_at', { ascending: true })
 
-  if (error) return NextResponse.json({ error: error.message },  if (error) return NextResponse.json({ error: error.message },  if (error) return NextResponse.json({ error: error.message },  if (error) return NextResponseor  if (error) return NextResponse.json({ errorny) => {
-                                                                                                                                                                                                                                                                       isMorn                            const ti                                   d +                                                               ider                                                                                                                                                                            ｜' + s.item + (s.qty ? ' × ' + s.qty : '')
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (!shippedData || shippedData.length === 0) {
+    return NextResponse.json({ ok: true, message: '今日尚無出貨' })
+  }
+
+  const records = isMorning
+    ? shippedData.filter((s: any) => {
+        const h = parseInt(s.shipped_time?.split(' ')?.[1]?.split(':')?.[0] || '0')
+        return h < 12
+      })
+    : shippedData
+
+  if (records.length === 0) {
+    return NextResponse.json({ ok: true, message: '此時段尚無出貨' })
+  }
+
+  const period = isMorning ? '早上' : '全天'
+  const title = '📦 ' + today + ' ' + period + '出貨匯總（共 ' + records.length + ' 筆）'
+  const divider = '────────────────────'
+
+  const fullDetails = records.map((s: any, i: number) => {
+    let line = (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : '')
     if (s.work_order) line += '\n   派工：' + s.work_order
-    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    if (s.    lin    if (s.    if (s.    if (s.    if (s.    illDetails
+    if (s.note) line += '\n   備註：' + s.note
+    line += '｜' + s.shipped_time
+    return line
+  }).join('\n')
+
+  const simpleDetails = records.map((s: any, i: number) =>
+    (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : '')
+  ).join('\n')
+
+  const fullMessage = title + '\n' + divider + '\n' + fullDetails
   const simpleMessage = title + '\n' + divider + '\n' + simpleDetails
 
   await sendLine(LINE_TOKEN, LINE_GROUP_ID, fullMessage)
