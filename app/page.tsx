@@ -368,7 +368,10 @@ export default function Home() {
         <div style={{ background: '#f0faf2', borderRadius: 12, border: '0.5px solid #C0DD97', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '10px 12px', borderBottom: '0.5px solid #C0DD97', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 15, fontWeight: 500, color: '#27500A' }}>🚛 今日出貨</span>
-            <span style={{ fontSize: 12, background: '#C0DD97', color: '#27500A', padding: '2px 8px', borderRadius: 99, fontWeight: 500 }}>{shipped.length}</span>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontSize: 12, background: '#C0DD97', color: '#27500A', padding: '2px 8px', borderRadius: 99, fontWeight: 500 }}>{shipped.length}</span>
+              {shipped.length > 0 && <CopyButtons shipped={shipped} />}
+            </div>
           </div>
           <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto', maxHeight: 600 }}>
             {shipped.length === 0 ? (
@@ -483,6 +486,35 @@ function OrderCard({ o, onEdit, onDelete, onToggleUrgent, onMove, onShip, moveLa
     </div>
   )
 }
+
+function CopyButtons({ shipped }: { shipped: any[] }) {
+  const [copied, setCopied] = React.useState<string | null>(null)
+  function getText(full: boolean) {
+    const lines = shipped.map((s: any, i: number) => {
+      const row = [(i + 1) + '. ' + s.customer + '|' + s.item + (s.qty ? ' x ' + s.qty : '')]
+      if (full && s.work_order) row.push('   派工：' + s.work_order)
+      if (full && s.note) row.push('   備註：' + s.note)
+      return row.join('\n')
+    })
+    return '今日出貨（共 ' + shipped.length + ' 筆）\n----------\n' + lines.join('\n')
+  }
+  function copy(full: boolean) {
+    navigator.clipboard.writeText(getText(full))
+    setCopied(full ? 'full' : 'simple')
+    setTimeout(() => setCopied(null), 2000)
+  }
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      <button onClick={() => copy(false)} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '0.5px solid #C0DD97', background: copied === 'simple' ? '#C0DD97' : '#fff', color: '#27500A', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        {copied === 'simple' ? '✓已複製' : '簡版'}
+      </button>
+      <button onClick={() => copy(true)} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '0.5px solid #C0DD97', background: copied === 'full' ? '#C0DD97' : '#fff', color: '#27500A', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        {copied === 'full' ? '✓已複製' : '完整'}
+      </button>
+    </div>
+  )
+}
+
 
 function PrintCheck({ orderId }: { orderId: string }) {
   const key = `printed_${orderId}`
