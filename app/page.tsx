@@ -368,7 +368,10 @@ export default function Home() {
         <div style={{ background: '#f0faf2', borderRadius: 12, border: '0.5px solid #C0DD97', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '10px 12px', borderBottom: '0.5px solid #C0DD97', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 15, fontWeight: 500, color: '#27500A' }}>🚛 今日出貨</span>
-            <span style={{ fontSize: 12, background: '#C0DD97', color: '#27500A', padding: '2px 8px', borderRadius: 99, fontWeight: 500 }}>{shipped.length}</span>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontSize: 12, background: '#C0DD97', color: '#27500A', padding: '2px 8px', borderRadius: 99, fontWeight: 500 }}>{shipped.length}</span>
+              {shipped.length > 0 && <CopyButtons shipped={shipped} />}
+            </div>
           </div>
           <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto', maxHeight: 600 }}>
             {shipped.length === 0 ? (
@@ -481,6 +484,86 @@ function OrderCard({ o, onEdit, onDelete, onToggleUrgent, onMove, onShip, moveLa
         <button onClick={() => onDelete(o.id)} style={btnCard} title="刪除">🗑️</button>
       </div>
     </div>
+  )
+}
+
+function CopyButtons({ shipped }: { shipped: any[] }) {
+  const [copied, setCopied] = React.useState<string | null>(null)
+
+  function buildFull() {
+    const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric' })
+    const lines = shipped.map((s, i) => {
+      let line = (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : '')
+      if (s.work_order) line += '\n   派工：' + s.work_order
+      if (s.note) line += '\n   備註：' + s.note
+      return line
+    })
+    return '📦 ' + today + ' 出貨記錄（共 ' + shipped.length + ' 筆）\n────────────────────\n' + lines.join('\n')
+  }
+
+  function buildSimple() {
+    const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric' })
+    const lines = shipped.map((s, i) =>
+      (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : '')
+    )
+    return '📦 ' + today + ' 出貨記錄（共 ' + shipped.length + ' 筆）\n────────────────────\n' + lines.join('\n')
+  }
+
+  async function copy(type) {
+    const text = type === 'full' ? buildFull() : buildSimple()
+    await navigator.clipboard.writeText(text)
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      <button onClick={() => copy('simple')} title='複製簡版（客戶+品項）'
+        style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '0.5px solid #C0DD97', background: copied === 'simple' ? '#C0DD97' : '#fff', color: '#27500A', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        {copied === 'simple' ? '✓ 已複製' : '📋 簡版'}
+      </button>
+      <button onClick={() => copy('full')} title='複製完整版（含派工單備註）'
+        style={{ fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '0.5px solid #C0DD97', background: copied === 'full' ? '#C0DD97' : '#fff', color: '#27500A', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        {copied === 'full' ? '✓ 已複製' : '📋 完整'}
+      </button>
+    </div>
+  )
+}
+
+function CopyButtons({ shipped }) {
+  const [copied, setCopied] = React.useState(null)
+  function buildSimple() {
+    const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric' })
+    const lines = shipped.map((s, i) => (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : ''))
+    return '📦 ' + today + ' 出貨記錄（共 ' + shipped.length + ' 筆）
+────────────────────
+' + lines.join('
+')
+  }
+  function buildFull() {
+    const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric' })
+    const lines = shipped.map((s, i) => {
+      let line = (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : '')
+      if (s.work_order) line += '
+   派工：' + s.work_order
+      if (s.note) line += '
+   備註：' + s.note
+      return line
+    })
+    return '📦 ' + today + ' 出貨記錄（共 ' + shipped.length + ' 筆）
+────────────────────
+' + lines.join('
+')
+  }
+  async function copy(type) {
+    const text = type === 'full' ? buildFull() : buildSimple()
+    await navigator.clipboard.writeText(text)
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
+  }
+  return React.createElement('div', { style: { display: 'flex', gap: 4 } },
+    React.createElement('button', { onClick: () => copy('simple'), title: '複製簡版', style: { fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '0.5px solid #C0DD97', background: copied === 'simple' ? '#C0DD97' : '#fff', color: '#27500A', cursor: 'pointer', whiteSpace: 'nowrap' } }, copied === 'simple' ? '✓ 已複製' : '📋 簡版'),
+    React.createElement('button', { onClick: () => copy('full'), title: '複製完整版', style: { fontSize: 11, padding: '2px 6px', borderRadius: 6, border: '0.5px solid #C0DD97', background: copied === 'full' ? '#C0DD97' : '#fff', color: '#27500A', cursor: 'pointer', whiteSpace: 'nowrap' } }, copied === 'full' ? '✓ 已複製' : '📋 完整')
   )
 }
 
