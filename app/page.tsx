@@ -567,6 +567,48 @@ function CopyButtons({ shipped }) {
   )
 }
 
+function CopyButtons({ shipped }) {
+  const [copied, setCopied] = React.useState(null)
+  function buildSimple() {
+    const today = new Date().toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei", month: "numeric", day: "numeric" })
+    const lines = shipped.map((s, i) => (i + 1) + ". " + s.customer + "｜" + s.item + (s.qty ? " × " + s.qty : ""))
+    return "📦 " + today + " 出貨記錄（共 " + shipped.length + " 筆）
+────────────────────
+" + lines.join("
+")
+  }
+  function buildFull() {
+    const today = new Date().toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei", month: "numeric", day: "numeric" })
+    const lines = shipped.map((s, i) => {
+      let line = (i + 1) + ". " + s.customer + "｜" + s.item + (s.qty ? " × " + s.qty : "")
+      if (s.work_order) line += "\n   派工：" + s.work_order
+      if (s.note) line += "\n   備註：" + s.note
+      return line
+    })
+    return "📦 " + today + " 出貨記錄（共 " + shipped.length + " 筆）
+────────────────────
+" + lines.join("\n")
+  }
+  async function copy(type) {
+    const text = type === "full" ? buildFull() : buildSimple()
+    await navigator.clipboard.writeText(text)
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
+  }
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      <button onClick={() => copy("simple")} title="複製簡版"
+        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 6, border: "0.5px solid #C0DD97", background: copied === "simple" ? "#C0DD97" : "#fff", color: "#27500A", cursor: "pointer", whiteSpace: "nowrap" }}>
+        {copied === "simple" ? "✓ 已複製" : "📋 簡版"}
+      </button>
+      <button onClick={() => copy("full")} title="複製完整版"
+        style={{ fontSize: 11, padding: "2px 6px", borderRadius: 6, border: "0.5px solid #C0DD97", background: copied === "full" ? "#C0DD97" : "#fff", color: "#27500A", cursor: "pointer", whiteSpace: "nowrap" }}>
+        {copied === "full" ? "✓ 已複製" : "📋 完整"}
+      </button>
+    </div>
+  )
+}
+
 function PrintCheck({ orderId }: { orderId: string }) {
   const key = `printed_${orderId}`
   const [checked, setChecked] = React.useState(() => {
