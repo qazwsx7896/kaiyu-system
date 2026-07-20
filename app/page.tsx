@@ -535,10 +535,7 @@ function CopyButtons({ shipped }) {
   function buildSimple() {
     const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric' })
     const lines = shipped.map((s, i) => (i + 1) + '. ' + s.customer + '｜' + s.item + (s.qty ? ' × ' + s.qty : ''))
-    return '📦 ' + today + ' 出貨記錄（共 ' + shipped.length + ' 筆）
-────────────────────
-' + lines.join('
-')
+    return ["📦 " + today + " 出貨記錄（共 " + shipped.length + " 筆）", "────────────────────", ...lines].join("\n")
   }
   function buildFull() {
     const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric' })
@@ -550,10 +547,7 @@ function CopyButtons({ shipped }) {
    備註：' + s.note
       return line
     })
-    return '📦 ' + today + ' 出貨記錄（共 ' + shipped.length + ' 筆）
-────────────────────
-' + lines.join('
-')
+    return ["📦 " + today + " 出貨記錄（共 " + shipped.length + " 筆）", "────────────────────", ...lines].join("\n")
   }
   async function copy(type) {
     const text = type === 'full' ? buildFull() : buildSimple()
